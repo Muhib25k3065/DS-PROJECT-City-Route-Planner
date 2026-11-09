@@ -1,0 +1,19 @@
+# Build output
+*.exe
+*.o
+*.out
+
+# Dev-C++ project files (each person keeps a private local copy)
+*.dev
+*.layout
+*.win
+Makefile.win
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Temporary files created by tests
+tmp_*.txt
