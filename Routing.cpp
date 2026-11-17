@@ -158,3 +158,38 @@ void printRoute(const Graph& graph, const RouteResult& result, ostream& os) {
     totals << "  Total time:     " << result.totalTime << " min\n";
     os << totals.str();
 }
+
+RouteResult routeViaStop(const Graph& graph, int startID, int stopID, int endID, RouteMode mode) {
+    RouteResult result;
+    if (graph.locationCount() == 0) {
+        result.message = "The map is empty. Add locations and roads first.";
+        return result;
+    }
+    if (!graph.isValidLocation(stopID)) {
+        result.message = "Invalid required-stop location ID.";
+        return result;
+    }
+
+    RouteResult firstLeg = findRoute(graph, startID, stopID, mode);
+    if (!firstLeg.success) {
+        result.message = "The required stop cannot be reached from the start. " + firstLeg.message;
+        return result;
+    }
+
+    RouteResult secondLeg = findRoute(graph, stopID, endID, mode);
+    if (!secondLeg.success) {
+        result.message = "The destination cannot be reached from the required stop. " + secondLeg.message;
+        return result;
+    }
+
+    result.path = firstLeg.path;
+    int secondSize = secondLeg.path.size();
+    for (int i = 1; i < secondSize; i++) {
+        result.path.push_back(secondLeg.path[i]);
+    }
+    result.totalDistance = firstLeg.totalDistance + secondLeg.totalDistance;
+    result.totalTime = firstLeg.totalTime + secondLeg.totalTime;
+    result.success = true;
+    result.message = "Route through the required stop found.";
+    return result;
+}
