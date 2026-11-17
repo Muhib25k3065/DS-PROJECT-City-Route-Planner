@@ -290,3 +290,173 @@ void Graph::printMap(ostream& os) const {
         os << "  (none)\n";
     }
 }
+
+const int MAX_LOCATION_ID = 100000;
+
+bool Graph::deleteLocation(int id) {
+    if (!isValidLocation(id)) {
+        lastError = "No location with ID " + intToText(id) + " exists.";
+        return false;
+    }
+    int total = adjacency.size();
+    for (int u = 0; u < total; u++) {
+        if (u != id && findNode(u, id) != NULL) {
+            unlinkNode(u, id);
+        }
+    }
+    freeList(id);
+    locations[id].active = false;
+    locations[id].name = "";
+    activeCount--;
+    return true;
+}
+
+bool Graph::addLocationWithId(int id, const string& rawName) {
+    if (id < 0 || id > MAX_LOCATION_ID) {
+        lastError = "Location ID " + intToText(id) + " is out of range.";
+        return false;
+    }
+    int currentSize = locations.size();
+    if (id < currentSize) {
+        lastError = "Location IDs must be listed in increasing order (ID " + intToText(id) + ").";
+        return false;
+    }
+    string error;
+    if (!isValidLocationName(rawName, error)) {
+        lastError = error;
+        return false;
+    }
+    string name = trimText(rawName);
+    if (findLocationByName(name) != -1) {
+        lastError = "A location named \"" + name + "\" already exists.";
+        return false;
+    }
+    while (currentSize < id) {
+        Location placeholder;
+        placeholder.id = currentSize;
+        locations.push_back(placeholder);
+        adjacency.push_back(NULL);
+        currentSize++;
+    }
+    locations.push_back(Location(id, name));
+    adjacency.push_back(NULL);
+    activeCount++;
+    return true;
+}
+
+bool Graph::locatePair(int roadID, RoadNode*& first, RoadNode*& second) {
+    first = findNodeByRoadID(roadID);
+    second = NULL;
+    if (first == NULL) {
+        lastError = "No road with ID " + intToText(roadID) + " exists.";
+        return false;
+    }
+    if (first->isTwoWay) {
+        second = findNode(first->toID, first->fromID);
+        if (second == NULL || second->roadID != roadID) {
+            lastError = "Internal error: two-way road #" + intToText(roadID) + " is missing its paired entry.";
+            return false;
+        }
+    }
+    return true;
+}
+
+void Graph::unlinkNode(int fromID, int toID) {
+    RoadNode* previous = NULL;
+    RoadNode* current = adjacency[fromID];
+    while (current != NULL) {
+        if (current->toID == toID) {
+            if (previous == NULL) {
+                adjacency[fromID] = current->next;
+            } else {
+                previous->next = current->next;
+            }
+            delete current;
+            return;
+        }
+        previous = current;
+        current = current->next;
+    }
+}
+
+bool Graph::updateRoad(int roadID, double newDistance, double newTravelTime) {
+    string error;
+    if (!validateRoadWeights(newDistance, newTravelTime, error)) {
+        lastError = error;
+        return false;
+    }
+    RoadNode* first = NULL;
+    RoadNode* second = NULL;
+    if (!locatePair(roadID, first, second)) {
+        return false;
+    }
+    first->distance = newDistance;
+    first->travelTime = newTravelTime;
+    if (second != NULL) {
+        second->distance = newDistance;
+        second->travelTime = newTravelTime;
+    }
+    return true;
+}
+
+bool Graph::setRoadOpen(int roadID, bool open) {
+    RoadNode* first = NULL;
+    RoadNode* second = NULL;
+    if (!locatePair(roadID, first, second)) {
+        return false;
+    }
+    first->isOpen = open;
+    if (second != NULL) {
+        second->isOpen = open;
+    }
+    return true;
+}
+
+bool Graph::removeRoad(int roadID) {
+    RoadNode* first = NULL;
+    RoadNode* second = NULL;
+    if (!locatePair(roadID, first, second)) {
+        return false;
+    }
+    int from = first->fromID;
+    int to = first->toID;
+    bool twoWay = first->isTwoWay;
+    unlinkNode(from, to);
+    if (twoWay) {
+        unlinkNode(to, from);
+    }
+    return true;
+}
+
+bool Graph::restoreRoad(const Road& road) {
+    if (road.roadID < 0) {
+        lastError = "Road ID must not be negative.";
+        return false;
+    }
+    if (findNodeByRoadID(road.roadID) != NULL) {
+        lastError = "Road ID " + intToText(road.roadID) + " is already in use.";
+        return false;
+    }
+    if (!checkNewRoad(road)) {
+        return false;
+    }
+    insertRoadNodes(road);
+    if (road.roadID >= nextRoadID) {
+        nextRoadID = road.roadID + 1;
+    }
+    return true;
+}
+
+void Graph::swapWith(Graph& other) {
+    locations.swap(other.locations);
+    adjacency.swap(other.adjacency);
+    lastError.swap(other.lastError);
+
+    int temp = nextRoadID;
+    nextRoadID = other.nextRoadID;
+    other.nextRoadID = temp;
+
+    temp = activeCount;
+    activeCount = other.activeCount;
+    other.activeCount = temp;
+}

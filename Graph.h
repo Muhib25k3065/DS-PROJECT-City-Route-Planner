@@ -22,6 +22,8 @@ private:
     bool checkNewRoad(const Road& road);
     void appendNode(RoadNode* node);
     void insertRoadNodes(const Road& road);
+    bool locatePair(int roadID, RoadNode*& first, RoadNode*& second);
+    void unlinkNode(int fromID, int toID);
 
 public:
     Graph();
@@ -29,6 +31,8 @@ public:
 
     int addLocation(const string& name);
     bool editLocation(int id, const string& newName);
+    bool deleteLocation(int id);
+    bool addLocationWithId(int id, const string& name);
     bool isValidLocation(int id) const;
     const Location* getLocation(int id) const;
     string nameOf(int id) const;
@@ -41,7 +45,13 @@ public:
     const RoadNode* getOutgoing(int id) const;
     int roadCount() const;
 
+    bool updateRoad(int roadID, double newDistance, double newTravelTime);
+    bool setRoadOpen(int roadID, bool open);
+    bool removeRoad(int roadID);
+    bool restoreRoad(const Road& road);
+
     void clear();
+    void swapWith(Graph& other);
     void printLocations(ostream& os) const;
     void printMap(ostream& os) const;
     const string& getLastError() const;
