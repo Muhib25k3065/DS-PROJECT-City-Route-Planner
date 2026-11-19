@@ -1,7 +1,7 @@
 #ifndef ROUTING_H
 #define ROUTING_H
 
-#include <ostream>
+#include <iostream>
 #include <vector>
 #include "Graph.h"
 #include "RouteResult.h"
